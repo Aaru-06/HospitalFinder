@@ -32,14 +32,10 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.tasks.Task;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, com.google.android.gms.location.LocationListener
-,GoogleApiClient.OnConnectionFailedListener,GoogleApiClient.ConnectionCallbacks{
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback{
 
     private GoogleMap mMap;
     private String my_api_key="AIzaSyBUAk2Y6BDJFAeExCNNgFDDJfq6TXYnFVw";
-    private GoogleApiClient googleapiClient;
-    private Location location;
-    private LocationRequest locationRequest;
     private MarkerOptions currmarker;
 
     @Override
@@ -50,14 +46,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
-        googleapiClient = new GoogleApiClient.Builder(this)
-                .addApi(LocationServices.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
-        googleapiClient.connect();
-        checkingPermissions();
     }
 
 
@@ -74,6 +62,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         // Add a marker in Sydney and move the camera
+
+        checkingPermissions();
+
+        mMap.setMyLocationEnabled(true);
+
+        mMap.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
+            @Override
+            public void onMyLocationChange(Location location) {
+                mMap.clear();
+                currmarker = new MarkerOptions();
+                LatLng latlng = new LatLng(location.getLatitude(),location.getLongitude());
+                currmarker.position(latlng);
+                currmarker.snippet("current location");
+                mMap.addMarker(currmarker);
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,15.0f));
+            }
+        });
 
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
@@ -102,31 +107,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         {
             Toast.makeText(this,"Please install Google Play Services.!",Toast.LENGTH_SHORT).show();
         }
-    }
 
-    @Override
-    public void onLocationChanged(Location location) {
-        if (location == null) {
-            LocationManager locationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
-
-            if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                Toast.makeText(this, "Location is switched off.!", Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                startActivity(intent);
-            }
-        } else {
-                //clears all previous markers.!
-                mMap.clear();
-
-                Toast.makeText(this,"hi",Toast.LENGTH_SHORT).show();
-
-                LatLng curlatlng =new LatLng(location.getLatitude(),location.getLongitude());
-                currmarker=new MarkerOptions();
-                currmarker.position(curlatlng);
-                currmarker.snippet("hello world");
-                mMap.addMarker(currmarker);
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(curlatlng,15.0f));
-
+        LocationManager lm = (LocationManager)getSystemService(LOCATION_SERVICE);
+        if(!lm.isProviderEnabled("gps"))
+        {
+            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            startActivity(intent);
         }
     }
 
@@ -147,61 +133,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
-    public void onConnected(@Nullable Bundle bundle) {
-
-//        location = LocationServices.FusedLocationApi.getLastLocation(googleapiClient);
-//
-//
-//        onLocationChanged(location);
-        LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
-
-        if(!lm.isProviderEnabled("gps"))
-        {
-            Toast.makeText(this,"Location switched off",Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-            startActivity(intent);
-        }
-        else
-            mMap.setMyLocationEnabled(true);
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
-    }
-
-    @Override
     protected void onStart() {
         super.onStart();
 
-        if(googleapiClient!=null)
-        {
-            googleapiClient.connect();
-        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
-        if(!googleapiClient.isConnected())
-        {
-            googleapiClient.connect();
-        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
 
-        if(googleapiClient!=null && googleapiClient.isConnected())
-        {
-            googleapiClient.disconnect();
-        }
     }
 }
