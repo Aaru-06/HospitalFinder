@@ -1,43 +1,35 @@
 package com.arumugam.hospitalfinder;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
-
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Toast;
-
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.tasks.Task;
+
+import java.util.ArrayList;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback{
 
     private GoogleMap mMap;
-    private String my_api_key="AIzaSyBUAk2Y6BDJFAeExCNNgFDDJfq6TXYnFVw";
     private MarkerOptions currmarker;
-
+    private StringBuffer response;
+    private ApiQuery apiQuery;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,9 +66,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 currmarker = new MarkerOptions();
                 LatLng latlng = new LatLng(location.getLatitude(),location.getLongitude());
                 currmarker.position(latlng);
+                currmarker.title("My Location");
+                currmarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
                 currmarker.snippet("current location");
                 mMap.addMarker(currmarker);
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,15.0f));
+
+                if(response!=null)
+                    response.delete(0,response.length());
+
+                apiQuery = new ApiQuery();
+
+                response=apiQuery.query(location);
+
+                ArrayList<HospitalDetails> results = apiQuery.stringToObjects(response);
+
+                if(results==null)
+                {
+                    Toast.makeText(getApplicationContext(),"Result null",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                MarkerOptions m;
+                for(int i=0;i<results.size();i++)
+                {
+                    m=new MarkerOptions().position(new LatLng(results.get(i).getLocationlatlng()[0],results.get(i).getLocationlatlng()[1]));
+                    mMap.addMarker(m);
+                }
+
             }
         });
 
