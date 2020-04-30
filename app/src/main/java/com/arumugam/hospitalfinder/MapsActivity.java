@@ -97,6 +97,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     {
         Location location = mMap.getMyLocation();
         mMap.clear();
+
+        if(location==null)
+            return;
         currmarker = new MarkerOptions();
         LatLng latlng = new LatLng(location.getLatitude(),location.getLongitude());
         currmarker.position(latlng);
