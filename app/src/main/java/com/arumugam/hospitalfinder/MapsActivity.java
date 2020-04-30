@@ -4,6 +4,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -11,8 +12,10 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -30,10 +33,15 @@ import java.util.ArrayList;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback{
 
     private GoogleMap mMap;
+    private Location location;
     private MarkerOptions currmarker;
     private ArrayList<HospitalDetails> results;
     private ApiQuery apiQuery;
     private Button searchbutton;
+    private ArrayList<MarkerOptions> m;
+    private ProgressDialog pd;
+    private Thread thread;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,6 +53,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
 
         searchbutton = (Button)findViewById(R.id.search);
+
+        pd = new ProgressDialog(MapsActivity.this);
 
 
     }
@@ -68,7 +78,60 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         searchbutton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                setMarkers();
+
+                try {
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            location = mMap.getMyLocation();
+                            mMap.clear();
+
+                            if(location==null)
+                                return;
+                            currmarker = new MarkerOptions();
+                            LatLng latlng = new LatLng(location.getLatitude(),location.getLongitude());
+                            currmarker.position(latlng);
+                            currmarker.title("My Location");
+                            currmarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+                            currmarker.snippet("current location");
+                            mMap.addMarker(currmarker);
+                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,15.0f));
+
+                            results = ApiQuery.ping(location);
+
+                            if(results==null)
+                            {
+                                Toast.makeText(getApplicationContext(),"Result null",Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+
+
+                            Toast.makeText(getApplicationContext(),""+results.size(),Toast.LENGTH_SHORT).show();
+
+                            m=new ArrayList();
+
+                            for(int i=0;i<results.size();i++)
+                            {
+                                m.add(new MarkerOptions().position(new LatLng(results.get(i).getLocationlatlng()[0],results.get(i).getLocationlatlng()[1])));
+                                m.get(i).snippet(i+"");
+                            }
+
+                            if(m==null)
+                                return;
+
+                            for(int i=0;i<m.size();i++)
+                                mMap.addMarker(m.get(i));
+
+                        }
+                    });
+                }
+                catch(Exception e)
+                {
+                    Log.d("searchbutton",e.toString());
+                }
+
             }
         });
 
@@ -92,42 +155,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
     }
-
-    public void setMarkers()
-    {
-        Location location = mMap.getMyLocation();
-        mMap.clear();
-
-        if(location==null)
-            return;
-        currmarker = new MarkerOptions();
-        LatLng latlng = new LatLng(location.getLatitude(),location.getLongitude());
-        currmarker.position(latlng);
-        currmarker.title("My Location");
-        currmarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
-        currmarker.snippet("current location");
-        mMap.addMarker(currmarker);
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,15.0f));
-
-        results = ApiQuery.ping(location);
-
-        if(results==null)
-        {
-            Toast.makeText(getApplicationContext(),"Result null",Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        MarkerOptions m;
-        for(int i=0;i<results.size();i++)
-        {
-            m=new MarkerOptions().position(new LatLng(results.get(i).getLocationlatlng()[0],results.get(i).getLocationlatlng()[1]));
-            m.snippet(i+"");
-            mMap.addMarker(m);
-        }
-
-
-    }
-
     private boolean checkingPermissions()
     {
 

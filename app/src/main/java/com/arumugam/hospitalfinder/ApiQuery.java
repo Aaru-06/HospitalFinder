@@ -28,6 +28,17 @@ public class ApiQuery {
             @Override
             public void run() {
                 ApiQuery.query();
+            }
+        });
+
+        thread.start();
+
+        while(thread.isAlive());
+
+        thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+
                 ApiQuery.stringToObjects();
             }
         });
