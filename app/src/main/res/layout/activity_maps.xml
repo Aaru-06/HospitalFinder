@@ -11,11 +11,25 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MapsActivity" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_alignParentBottom="true"
+        >
+    <Spinner
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/category"
+        android:textAlignment="center"
+        android:background="@android:drawable/btn_default"
+        />
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="SEARCH"
         android:id="@+id/search"
-        android:layout_alignParentBottom="true"
         />
+    </LinearLayout>
 </RelativeLayout>

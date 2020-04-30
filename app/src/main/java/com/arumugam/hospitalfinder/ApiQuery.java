@@ -18,12 +18,13 @@ public class ApiQuery {
     private static String my_api_key="AIzaSyCzUnFNJooxdc_xjVQRnx6yKknEuzym_t8";
     private static Location location;
     private static StringBuffer sbuff;
+    private static String cat;
     private static ArrayList<HospitalDetails> hospdetails;
 
-    public static ArrayList<HospitalDetails> ping(Location loc)
+    public static ArrayList<HospitalDetails> ping(Location loc,String category)
     {
         location=loc;
-
+        cat=category;
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -55,7 +56,7 @@ public class ApiQuery {
         String q;
 
         StringBuilder sb = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
-        sb.append("types=hospital");
+        sb.append("types="+cat);
         sb.append("&location="+location.getLatitude()+","+location.getLongitude());
         sb.append("&radius=3000");
         sb.append("&key="+my_api_key);

@@ -14,8 +14,10 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -36,11 +38,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Location location;
     private MarkerOptions currmarker;
     private ArrayList<HospitalDetails> results;
-    private ApiQuery apiQuery;
     private Button searchbutton;
     private ArrayList<MarkerOptions> m;
-    private ProgressDialog pd;
-    private Thread thread;
+    private Spinner sp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,9 +54,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         searchbutton = (Button)findViewById(R.id.search);
 
-        pd = new ProgressDialog(MapsActivity.this);
-
-
+        sp = (Spinner) findViewById(R.id.category);
+        String[] options = {"Hospital","Pharmacy"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(MapsActivity.this,android.R.layout.simple_spinner_item,options);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        sp.setAdapter(adapter);
     }
 
 
@@ -99,7 +101,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             mMap.addMarker(currmarker);
                             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,15.0f));
 
-                            results = ApiQuery.ping(location);
+                            results = ApiQuery.ping(location,sp.getSelectedItem().toString().toLowerCase());
 
                             if(results==null)
                             {
@@ -107,8 +109,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 return;
                             }
 
-
-                            Toast.makeText(getApplicationContext(),""+results.size(),Toast.LENGTH_SHORT).show();
+                            if(results.size()==0)
+                                Toast.makeText(getApplicationContext(),"Please try again in few moments",Toast.LENGTH_SHORT).show();
 
                             m=new ArrayList();
 
