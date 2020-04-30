@@ -15,44 +15,78 @@ import java.util.ArrayList;
 
 
 public class ApiQuery {
-    private String my_api_key="AIzaSyBUAk2Y6BDJFAeExCNNgFDDJfq6TXYnFVw";
-    public StringBuffer query(Location location)
+    private static String my_api_key="AIzaSyCzUnFNJooxdc_xjVQRnx6yKknEuzym_t8";
+    private static Location location;
+    private static StringBuffer sbuff;
+    private static ArrayList<HospitalDetails> hospdetails;
+
+    public static ArrayList<HospitalDetails> ping(Location loc)
     {
-        String q = "https://maps.googleapis.com/maps/api/place/details/json?rankby=distance&keyword=hosiptal&location";
-        q=q+location.getLatitude()+","+location.getLongitude();
-        q=q+"&key="+my_api_key;
+        location=loc;
+
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ApiQuery.query();
+                ApiQuery.stringToObjects();
+            }
+        });
+
+        thread.start();
+
+        while(thread.isAlive());
+
+        return hospdetails;
+    }
+
+    public static void query()
+    {
+        String q;
+
+        StringBuilder sb = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
+        sb.append("types=hospital");
+        sb.append("&location="+location.getLatitude()+","+location.getLongitude());
+        sb.append("&radius=3000");
+        sb.append("&key="+my_api_key);
+
+        q=sb.toString();
 
         try {
             URL url = new URL(q);
             HttpURLConnection httpconn = (HttpURLConnection)url.openConnection();
             InputStream inputStream = httpconn.getInputStream();
             BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuffer sbuff = new StringBuffer();
+            StringBuffer buff = new StringBuffer();
             String s="";
 
             while((s=br.readLine())!=null)
             {
-                sbuff.append(s);
+                buff.append(s);
             }
 
-            return sbuff;
+            sbuff=buff;
+            return;
         }
         catch(Exception e) {
             Log.d("url exception", e.toString());
         }
 
-        return null;
+        sbuff=null;
+        return;
     }
 
-    public ArrayList<HospitalDetails> stringToObjects(StringBuffer sbuff) {
-        ArrayList<HospitalDetails> hospdetails = new ArrayList();
+    public static void stringToObjects() {
+        hospdetails = new ArrayList();
 
         if (sbuff == null)
-            return null;
+        {
+            hospdetails=null;
+            return;
+        }
 
         try {
             JSONObject jsonobj = new JSONObject(sbuff.toString());
-            JSONArray jsonarray = jsonobj.getJSONArray("result");
+            JSONArray jsonarray = jsonobj.getJSONArray("results");
 
             for(int i=0; i<jsonarray.length(); i++){
 
@@ -82,12 +116,12 @@ public class ApiQuery {
 
                     hospdetails.add(hospitalDetails);
             }
-
-            return hospdetails;
+            return;
         }
         catch(Exception e) {
             Log.d("jsonobject", e.toString());
-            return null;
+            hospdetails=null;
+            return;
         }
 
     }

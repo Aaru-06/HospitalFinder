@@ -1,5 +1,6 @@
 package com.arumugam.hospitalfinder;
 
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 import android.Manifest;
@@ -10,6 +11,8 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -28,16 +31,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
     private MarkerOptions currmarker;
-    private StringBuffer response;
+    private ArrayList<HospitalDetails> results;
     private ApiQuery apiQuery;
+    private Button searchbutton;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        searchbutton = (Button)findViewById(R.id.search);
+
+
     }
 
 
@@ -54,70 +63,85 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         // Add a marker in Sydney and move the camera
-
         checkingPermissions();
 
-        mMap.setMyLocationEnabled(true);
-
-        mMap.setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener() {
+        searchbutton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onMyLocationChange(Location location) {
-                mMap.clear();
-                currmarker = new MarkerOptions();
-                LatLng latlng = new LatLng(location.getLatitude(),location.getLongitude());
-                currmarker.position(latlng);
-                currmarker.title("My Location");
-                currmarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
-                currmarker.snippet("current location");
-                mMap.addMarker(currmarker);
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,15.0f));
-
-                if(response!=null)
-                    response.delete(0,response.length());
-
-                apiQuery = new ApiQuery();
-
-                response=apiQuery.query(location);
-
-                ArrayList<HospitalDetails> results = apiQuery.stringToObjects(response);
-
-                if(results==null)
-                {
-                    Toast.makeText(getApplicationContext(),"Result null",Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                MarkerOptions m;
-                for(int i=0;i<results.size();i++)
-                {
-                    m=new MarkerOptions().position(new LatLng(results.get(i).getLocationlatlng()[0],results.get(i).getLocationlatlng()[1]));
-                    mMap.addMarker(m);
-                }
-
+            public void onClick(View v) {
+                setMarkers();
             }
         });
 
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
+                if(marker.getSnippet().equals("current location"))
+                {
+                    Toast.makeText(getApplicationContext(),"My Location",Toast.LENGTH_SHORT).show();
+                    return true;
+                }
                 Intent intent = new Intent(getApplicationContext(),HospitalView.class);
-                intent.putExtra("msg",marker.getSnippet());
+                intent.putExtra("obj",results.get(Integer.parseInt(marker.getSnippet())));
+                Location l = mMap.getMyLocation();
+                StringBuilder sb = new StringBuilder();
+                sb.append(l.getLatitude()+","+l.getLongitude());
+                String loc = sb.toString();
+                intent.putExtra("loc",loc);
                 startActivity(intent);
                 return true;
             }
         });
     }
 
-    private void checkingPermissions()
+    public void setMarkers()
+    {
+        Location location = mMap.getMyLocation();
+        mMap.clear();
+        currmarker = new MarkerOptions();
+        LatLng latlng = new LatLng(location.getLatitude(),location.getLongitude());
+        currmarker.position(latlng);
+        currmarker.title("My Location");
+        currmarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+        currmarker.snippet("current location");
+        mMap.addMarker(currmarker);
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,15.0f));
+
+        results = ApiQuery.ping(location);
+
+        if(results==null)
+        {
+            Toast.makeText(getApplicationContext(),"Result null",Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        MarkerOptions m;
+        for(int i=0;i<results.size();i++)
+        {
+            m=new MarkerOptions().position(new LatLng(results.get(i).getLocationlatlng()[0],results.get(i).getLocationlatlng()[1]));
+            m.snippet(i+"");
+            mMap.addMarker(m);
+        }
+
+
+    }
+
+    private boolean checkingPermissions()
     {
 
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this,"Permission not granted..!",Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-            Uri uri = Uri.fromParts("package",getPackageName(),null);
-            intent.setData(uri);
-            startActivity(intent);
+
+            if (ActivityCompat.shouldShowRequestPermissionRationale(MapsActivity.this,
+                    Manifest.permission.READ_CONTACTS)) {
+                Toast.makeText(this,"Location Services required",Toast.LENGTH_SHORT).show();
+            } else {
+                ActivityCompat.requestPermissions(MapsActivity.this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},100);
+            }
+            //return false;
+        }
+        else{
+            mMap.setMyLocationEnabled(true);
         }
 
         if(!checkPlayServices())
@@ -131,7 +155,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
             startActivity(intent);
         }
+        return true;
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case 100: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+                    mMap.setMyLocationEnabled(true);
+                } else {
+                    Toast.makeText(this,"Cannot provide the location services",Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request.
+        }
+    }
+
 
     private boolean checkPlayServices() {
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();

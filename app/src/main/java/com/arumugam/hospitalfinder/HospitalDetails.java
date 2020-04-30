@@ -1,8 +1,9 @@
 package com.arumugam.hospitalfinder;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
-public class HospitalDetails {
+public class HospitalDetails implements Serializable {
 
     /** hospitalName variable */
     private String hospitalName;
